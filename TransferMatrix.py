@@ -1,13 +1,14 @@
 import numpy as np
 import pickle
+from scipy.io import savemat
 
 import AskUserinputRecursively
+from MatlabRunner import MatlabRunner
 from PlaneWaveSet import PlaneWaveSet
 
 if __name__ == '__main__':
 
-    # Parameters of PWD
-    print("Initialization...")
+    print("Initializing plane wave set...")
     wavelength = 299792458 / 1e9  # [m]
     k_wave = 2 * np.pi / wavelength
     # Initialize plane wave set
@@ -16,26 +17,27 @@ if __name__ == '__main__':
         sampling_rate=14 / wavelength,
         window=120,
     )
-    pw_set.save_incident_angles_mat()
+    pw_set.save_incident_angles_mat(path="./MATLAB/data/")
 
-    # Only go forward if MATLAB simulation is done and the E-field transfer-matrix is ready
-    if not AskUserinputRecursively.yes_or_no("Continue with the process of the MATLAB simulation results?"):
-        raise KeyboardInterrupt
-    print("Reading MATLAB results...")
-    matlab_structure = "structA"
-    simulation_string = "w%d_x%d_k%d" % (
-        np.round(pw_set.x_sampling.size * pw_set.x_step),
-        pw_set.x_sampling.size,
-        pw_set.k_x.size
-    )
-    efield_transfer_matrix = np.genfromtxt(
-        fname="data/efield_transfer_mat_%s_%s.txt" % (simulation_string, matlab_structure),
-        dtype=np.complex64,
+    cylinder_structure_name = "structureB"
+    cylinder_struct = np.genfromtxt(
+        fname="data/cylinders_%s.txt" % cylinder_structure_name,
+        dtype=np.float64,
         delimiter=",",
+        skip_header=2,
     )
-    cylinder_pos = np.genfromtxt(
-        fname="data/cylinders_%s.txt" % matlab_structure,
-        dtype=np.float32,
+    savemat("./MATLAB/data/cylinder_struct.mat", dict(clyinders=cylinder_struct))
+
+    if AskUserinputRecursively.yes_or_no("Run MATLAB simulation to excite with PW set?"):
+        print("Running MATLAB simulation to excite with PW set...")
+        matlab = MatlabRunner()
+        matlab.run_matlab_script("mieScatt_multiPW.m")
+        matlab.export_fixer()
+
+    print("Reading MATLAB results...")
+    efield_transfer_matrix = np.genfromtxt(
+        fname="MATLAB/data/efield_transfer_mat.txt",
+        dtype=np.complex64,
         delimiter=",",
     )
 
@@ -64,11 +66,11 @@ if __name__ == '__main__':
         # ez_kx[i] = ez_kx[i] * np.exp(1j * k_y * 0)
 
     # Transpose back, so that the k_x variable goes along the columns
-    ez_kx = np.transpose(ez_kx)
+    transfer_matrix = np.transpose(ez_kx)
 
     # Save resulting Transfer-matrix in file
     print("Saving transfer-matrix...")
-    with open("data/transfer_mat_%s_%s.pkl" % (simulation_string, matlab_structure), "wb") as file:
-        pickle.dump(ez_kx, file)
+    with open("data/transfer_mat_%s.pkl" % cylinder_structure_name, "wb") as file:
+        pickle.dump(transfer_matrix, file)
 
     print("DONE")

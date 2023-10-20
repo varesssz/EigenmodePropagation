@@ -1,4 +1,5 @@
 import warnings
+import os.path
 import numpy as np
 from scipy.io import savemat
 
@@ -54,24 +55,27 @@ class PlaneWaveSet:
         # Creating k_y from k_x
         self.k_y = np.sqrt(k_wave**2 - self.k_x**2)
 
-    def save_incident_angles_mat(self):
-        """
-        Saving incident angles and sampling points for MATLAB simulation.
-        """
         # NumPy handles arctan(np.inf)=pi/2, so zero divide can be ignored
         warnings.filterwarnings("ignore", "divide by zero encountered in divide")
         # Calculating PW incident angles (angle of vector k, measured from the x-axis(CCW))
-        incident_angles = np.arctan(self.k_y / self.k_x)
-        incident_angles[incident_angles < 0] += np.pi
+        self.directions = np.arctan(self.k_y / self.k_x)
+        self.directions[self.directions < 0] += np.pi
+
+        # self.param_string = "w%d_x%d_k%d" % (
+        #     window,
+        #     self.x_sampling.size,
+        #     self.k_x.size
+        # )
+
+    def save_incident_angles_mat(self, path: str):
+        """
+        Saving incident angles and sampling points for MATLAB simulation.
+        """
         savemat(
-            "./data/pw_set_w%d_x%d_k%d.mat" % (
-                np.round(self.x_sampling.size * self.x_step),
-                self.x_sampling.size,
-                incident_angles.size
-            ),
+            os.path.join(path, "pw_set.mat"),
             dict(
                 kwave=self.k_wave,
                 sample_points_x=self.x_sampling,
-                incident_angles_rad=incident_angles,
+                incident_angles_rad=self.directions,
             ),
         )

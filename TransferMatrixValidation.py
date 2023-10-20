@@ -1,6 +1,8 @@
 import numpy as np
 import pickle
 
+import AskUserinputRecursively
+from MatlabRunner import MatlabRunner
 from MyPlotlyFigure import MyPlotlyFigure
 from PlaneWaveSet import PlaneWaveSet
 
@@ -17,15 +19,16 @@ if __name__ == '__main__':
         window=120,
     )
 
+    cylinder_structure_name = "structureB"
     print("Load Transfer-matrix from file...")
-    with open("data/transfer_mat_w120_x5605_k801_structA.pkl", "rb") as file:
+    with open("data/transfer_mat_%s.pkl" % cylinder_structure_name, "rb") as file:
         transfer_matrix = pickle.load(file)
 
     # Create excitation vector
     excitation_vector = np.zeros(pw_set.k_x.size, np.complex64)
-    excitation_vector[469] = 1
-    excitation_vector[400] = 1
-    excitation_vector[93] = 1
+    excitation_vector[469] = 1+0j
+    excitation_vector[400] = 1+0j
+    excitation_vector[93] = 1+0j
 
     # Calculate Ez(k_x) with transfer-matrix and excitation vector
     print("Calculate resulted plane waves from transfer-matrix...")
@@ -40,10 +43,15 @@ if __name__ == '__main__':
             ez_kx_forward_i * np.exp(1j * k_y_i * y_reconstruct) * np.exp(1j * k_x_i * pw_set.x_sampling)
         )
 
-    # Load in simulation results for the same excitation
-    print("Load previously simulated validation data from file...")
+    if AskUserinputRecursively.yes_or_no("Run MATLAB simulation to excite with partial of the PW set?"):
+        print("Run MATLAB simulation to excite with partial of the PW set...")
+        matlab = MatlabRunner()
+        matlab.run_matlab_script("mieScatt_somePW.m")
+        matlab.export_fixer()
+
+    print("Reading MATLAB results...")
     e_z_simulated = np.genfromtxt(
-        fname="data/e_field_y0_w120_x5605_k801_structA.txt",
+        fname="MATLAB/data/validation_e_field_y0.txt",
         dtype=np.complex64,
         delimiter=",",
     )
