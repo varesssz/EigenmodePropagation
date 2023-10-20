@@ -24,3 +24,19 @@ class MyPlotlyFigure(Figure):
                 zerolinecolor="lightgrey"
             ),
         )
+        self.update_polars(
+            bgcolor="white",
+            sector=(0, 180),
+            angularaxis=dict(
+                showline=True,
+                linecolor="grey",
+                showgrid=True,
+                gridcolor="lightgrey",
+            ),
+            radialaxis=dict(
+                showline=True,
+                linecolor="grey",
+                showgrid=True,
+                gridcolor="lightgrey",
+            ),
+        )
