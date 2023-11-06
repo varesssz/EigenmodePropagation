@@ -1,5 +1,6 @@
 from subprocess import run
 import os.path
+import time
 
 
 class MatlabRunner:
@@ -13,20 +14,28 @@ class MatlabRunner:
     def open_matlab(self):
         run([
             self.program_path, "-nosplash", "-desktop",
-            "-r", "run('cd(['%s'])');" % self.current_directory,
+            "-r", "cd(['%s'])" % self.current_directory,
         ])
 
     def run_matlab_script(
             self,
             script_fname: str,
     ):
+        start_sec = time.time()
         run([
             self.program_path, "-nodisplay", "-nosplash", "-nodesktop",
             "-r", "run('%s'); exit;" % os.path.join(self.current_directory, script_fname),
         ])
+        elapsed_sec = time.time() - start_sec
+        print("=======================================")
+        print(" The script took %dh %dmin %dsec to run" % (elapsed_sec // 3600, elapsed_sec // 60, elapsed_sec % 60))
+        print("=======================================\n\n")
 
-    def export_fixer(self):
-        data_folder = os.path.join(self.current_directory, "data")
+    def export_fixer(
+            self,
+            sub_folder="data",
+    ):
+        data_folder = os.path.join(self.current_directory, sub_folder)
         for file_name in os.listdir(data_folder):
             if file_name.find(".txt") != -1:
                 # Read the contents of file in a variable

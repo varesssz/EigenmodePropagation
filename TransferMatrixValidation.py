@@ -66,14 +66,16 @@ if __name__ == '__main__':
     fig.add_scatter(
         x=pw_set.x_sampling,
         y=np.real(ez_reconstructed_1d),
-        name=f"reconstructed (y = {y_reconstruct})",
+        name=f"reconstructed",
+        mode="markers",
     )
     fig.add_scatter(
         x=pw_set.x_sampling,
         y=np.real(e_z_simulated),
-        name=f"simulated (y = {y_reconstruct})",
+        name=f"simulated",
     )
     fig.matlab_styling()
+    fig.update_xaxes(range=[-10, 10])
     fig.show()
 
     # Root-Mean-Square Deviation

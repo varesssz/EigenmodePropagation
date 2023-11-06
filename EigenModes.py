@@ -2,6 +2,7 @@ import numpy as np
 import pickle
 from scipy.io import savemat
 
+import AskUserinputRecursively
 from MatlabRunner import MatlabRunner
 from PlaneWaveSet import PlaneWaveSet
 from MyPlotlyFigure import MyPlotlyFigure
@@ -86,43 +87,54 @@ if __name__ == '__main__':
     )
 
     # Plot the selected eigenmode plane wave components (= eigen vector elements)
-    fig = MyPlotlyFigure(layout=dict(
-        title_text="Absolute value of eigenmode plane wave components",
-        xaxis_title="incident angle of PW [deg]",
-    ))
-    fig.matlab_styling()
-    fig.update_layout(margin=dict(r=20, t=80, b=10))
-    fig.update_polars(radialaxis=dict(range=[0, 0.1]))
-    for index in indices:
-        fig.add_scatterpolar(
-            theta=np.rad2deg(pw_set.directions),
-            r=np.abs(eig_vectors[:, index]),
-            mode="markers",
-            text="#%d" % index,
-            name="eigenmode #%d (eigenvalue: %.3f ∠ %.3f°)" % (
-                index,
-                np.abs(eig_values[index]),
-                np.rad2deg(np.angle(eig_values[index]))
-            ),
-            hoverinfo="r+theta+text"
-        )
-    fig.show()
+    if AskUserinputRecursively.yes_or_no("Plot the eigenmode components on polar?"):
+        fig = MyPlotlyFigure(layout=dict(
+            title_text="Absolute value of eigenmode plane wave components",
+            xaxis_title="incident angle of PW [deg]",
+        ))
+        fig.matlab_styling()
+        fig.update_layout(margin=dict(r=20, t=80, b=10))
+        fig.update_polars(radialaxis=dict(range=[0, 0.1]))
+        for index in indices:
+            fig.add_scatterpolar(
+                theta=np.rad2deg(pw_set.directions),
+                r=np.abs(eig_vectors[:, index]),
+                mode="markers",
+                text="#%d" % index,
+                name="eigenmode #%d (eigenvalue: %.3f ∠ %.3f°)" % (
+                    index,
+                    np.abs(eig_values[index]),
+                    np.rad2deg(np.angle(eig_values[index]))
+                ),
+                hoverinfo="r+theta+text"
+            )
+        fig.show()
 
     # Simulate with selected eigenmode on a 2D space
-    for index in indices:
-        savemat(
-            file_name="MATLAB/data/eigenvector.mat",
-            mdict=dict(
-                eigenmode_number=index,
-                eigen_vector=eig_vectors[:, index],
-            )
-        )
-        print(
-            "Running MATLAB simulation to excite with eigenmode #%d (eigenvalue: %.3f ∠ %.3f°)..." % (
-                index,
-                np.abs(eig_values[index]),
-                np.rad2deg(np.angle(eig_values[index]))
-            )
-        )
+    if AskUserinputRecursively.yes_or_no("Run MATLAB simulation to check the filtered eigenmodes?"):
         matlab = MatlabRunner()
-        matlab.run_matlab_script("mieScatt_eigenPW.m")
+        user_indices = [int(item) for item in input(
+            "\nEnter eigenmode indices if you want to simulate other than the following: %s\n" % indices
+        ).split()]
+        if len(user_indices) != 0:
+            indices = user_indices
+        for index in indices:
+            savemat(
+                file_name="MATLAB/data/eigenvector_sim_config.mat",
+                mdict=dict(
+                    with_structure=True,
+                    eigenmode_number=index,
+                    eigen_vector=eig_vectors[:, index],
+                    eval_x=np.linspace(-4.5, 4.5, 60 + 1),
+                    eval_y=np.linspace(-5.0, 1.0, 40 + 1),
+                )
+            )
+            print(
+                "Running MATLAB simulation to excite with eigenmode #%d (eigenvalue: %.3f ∠ %.3f°)..." % (
+                    index,
+                    np.abs(eig_values[index]),
+                    np.rad2deg(np.angle(eig_values[index]))
+                )
+            )
+            matlab.run_matlab_script("mieScatt_eigenPW.m")
+            matlab.export_fixer("output")

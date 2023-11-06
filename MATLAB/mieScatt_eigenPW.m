@@ -10,7 +10,7 @@ load("data/pw_set.mat")
 % structure description (cylinder positions and size)
 load("data/cylinder_struct.mat");
 % eigen mode excitation vector
-load("data/eigenvector.mat")
+load("data/eigenvector_sim_config.mat")
 
 % Create scatterer object (Soft = PEC)
 figure(1)
@@ -19,13 +19,15 @@ ylim([-2 2])
 axis equal
 cyl_list = [];
 for cyl = transpose(clyinders)
-    cyl_list=[cyl_list, scatterer(cyl(1) + cyl(2)*1i, cyl(3), 'soft')];
+    if with_structure
+        cyl_list=[cyl_list, scatterer(cyl(1) + cyl(2)*1i, cyl(3), 'soft')];
+    else
+        cyl_list=[cyl_list, scatterer(cyl(1) + cyl(2)*1i, cyl(3), 'dielectric', 1)];
+    end
     cyl_list(end).show()
 end
 
 % Create space points to evaluate the field
-eval_x = linspace(-4.5, 4.5, 241);
-eval_y = linspace(-5.0, 1.0, 161);
 [X_var,Y_var] = meshgrid(eval_x,eval_y);
 points_to_evaluate = X_var + 1i*Y_var;
 
@@ -38,12 +40,10 @@ f = waitbar(0, 'Starting');
 n = size(incident_angles_rad, 2);
 start = datetime;
 
-i = 0;
-for dir = incident_angles_rad
-    i = i + 1;
+i = 1;
+for direction = incident_angles_rad
     % setup an incident plane wave
-    direction_rad = dir; % deg2rad(dir);
-    inc = plane_wave(direction_rad,kwave);
+    inc = plane_wave(direction,kwave);
 
     % setup the solver using the incident wave
     p = MieSolver(inc);
@@ -69,8 +69,19 @@ for dir = incident_angles_rad
     waitbar(i/n, f, ...
         sprintf('Plane Waves: %d out of %d  |  Remaining: ', i, n) + ...
         string((datetime - start)/i*(n-i)));
+
+    i = i + 1;
 end
 close(f)
+
+if with_structure
+    struct_string = "pec";
+else
+    struct_string = "vacuum";
+end
+
+% Write out results in file
+writematrix(e_field, sprintf('output/eigenmode_e_field_%d_%s.txt', eigenmode_number, struct_string))
 
 %% Plot
 figure(2)
@@ -81,7 +92,7 @@ axis equal
 colorbar
 caxis([0 15])
 set(gca,'YDir','normal')
-print(gcf,sprintf('eigenmode_abs_%d.png', eigenmode_number),'-dpng','-r200');
+print(gcf,sprintf('output/eigenmode_png_abs_%d_%s.png', eigenmode_number, struct_string),'-dpng','-r200');
 
 figure(3)
 imagesc(eval_x,eval_y,real(e_field))
@@ -92,5 +103,5 @@ colorbar
 colormap(jet(256));
 caxis([-15 15])
 set(gca,'YDir','normal')
-print(gcf,sprintf('eigenmode_real_%d.png', eigenmode_number),'-dpng','-r200');
+print(gcf,sprintf('output/eigenmode_png_real_%d_%s.png', eigenmode_number, struct_string),'-dpng','-r200');
 
