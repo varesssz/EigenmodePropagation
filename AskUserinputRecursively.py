@@ -10,7 +10,7 @@ def yes_or_no(msg: str):
     elif ans in ["N", "n"]:
         return False
     else:
-        yes_or_no(msg)
+        return yes_or_no(msg)
 
 
 def yes_or_no_or_cancel(msg: str):
@@ -27,4 +27,4 @@ def yes_or_no_or_cancel(msg: str):
     elif ans in ["Cancel", "cancel"]:
         return None
     else:
-        yes_or_no_or_cancel(msg)
+        return yes_or_no_or_cancel(msg)
