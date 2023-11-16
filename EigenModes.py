@@ -86,6 +86,10 @@ if __name__ == '__main__':
         filter_eig_vector_direction_hitrate=0.1,
     )
 
+    indices = [757, 761, 763, 765, 768, 772, 774]
+
+    direction_mask = (pw_set.directions > np.deg2rad(0)) & (np.deg2rad(180) > pw_set.directions)
+
     # Plot the selected eigenmode plane wave components (= eigen vector elements)
     if AskUserinputRecursively.yes_or_no("Plot the eigenmode components on polar?"):
         fig = MyPlotlyFigure(layout=dict(
@@ -98,7 +102,7 @@ if __name__ == '__main__':
         for index in indices:
             fig.add_scatterpolar(
                 theta=np.rad2deg(pw_set.directions),
-                r=np.abs(eig_vectors[:, index]),
+                r=np.abs(eig_vectors[:, index]) * direction_mask,
                 mode="markers",
                 text="#%d" % index,
                 name="eigenmode #%d (eigenvalue: %.3f ∠ %.3f°)" % (
@@ -124,7 +128,7 @@ if __name__ == '__main__':
                 mdict=dict(
                     with_structure=True,
                     eigenmode_number=index,
-                    eigen_vector=eig_vectors[:, index],
+                    eigen_vector=eig_vectors[:, index] * direction_mask,
                     eval_x=np.linspace(-4.5, 4.5, 60 + 1),
                     eval_y=np.linspace(-5.0, 1.0, 40 + 1),
                 )
