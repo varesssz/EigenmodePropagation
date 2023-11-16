@@ -2,6 +2,7 @@ import warnings
 import os.path
 import numpy as np
 from scipy.io import savemat
+from scipy.signal import windows
 
 
 class PlaneWaveSet:
@@ -25,7 +26,7 @@ class PlaneWaveSet:
         # Sampling is made symmetrically for continuous wave likeness
         self.x_sampling = np.linspace(-window/2, window/2, N, endpoint=False)
         # Sampling step size calculated as the mean value of sampling intervals
-        self.x_step = np.mean(np.delete(np.delete(np.append(self.x_sampling, 0) - np.append(0, self.x_sampling), -1), 0))
+        self.x_step = np.mean(np.diff(self.x_sampling))
         if self.x_step > (np.pi / k_wave):  # warn if sampling step size is smaller, than half a wavelength
             warnings.warn("Undersampling the expected wavelength!", RuntimeWarning)
 
@@ -67,15 +68,75 @@ class PlaneWaveSet:
         #     self.k_x.size
         # )
 
-    def save_incident_angles_mat(self, path: str):
+        self.model = "plane_wave"
+
+        self.parameters_to_save = dict(
+            kwave=self.k_wave,
+            sample_points_x=self.x_sampling,
+            inc_angles=self.directions,
+            model_select=self.model,
+        )
+
+    def set_up_points_along_line_model(
+            self,
+            array_distance: int | float,
+    ):
+        self.model = "points_along_line"
+        # Source position from line position and direction
+        sources_y = array_distance
+        sources_x = sources_y / np.tan(self.directions)
+        sources_xy = sources_x + 1j * sources_y
+
+        # Save it to parameter dictionary
+        self.parameters_to_save["sources_pos"] = sources_xy
+        self.parameters_to_save["model_select"] = self.model
+
+    def set_up_points_along_circle_model(
+            self,
+            array_radius: int | float,
+    ):
+        self.model = "points_along_circle"
+        # Source position from line position and direction
+        sources_x = np.cos(self.directions) * array_radius
+        sources_y = np.sin(self.directions) * array_radius
+        sources_xy = sources_x + 1j * sources_y
+
+        # Save it to parameter dictionary
+        self.parameters_to_save["sources_pos"] = sources_xy
+        self.parameters_to_save["model_select"] = self.model
+
+    def set_up_phased_array_model(
+            self,
+            array_distance: int | float,
+            array_length: int | float,
+            element_dist_per_lambda: int | float,
+            taylor_windowing=False,
+    ):
+        self.model = "points_as_phased_array"
+        # Parameters of the model
+        element_distance = element_dist_per_lambda * (2 * np.pi / self.k_wave)
+        element_count = (int(array_length / element_distance) + 1) // 2 * 2 + 1
+
+        # Source position from line position and direction
+        sources_x = np.linspace(-array_length / 2, array_length / 2, element_count)
+        sources_y = array_distance
+        sources_xy = sources_x + 1j * sources_y
+
+        # Weighting antenna elements
+        weights = np.ones(element_count)
+        if taylor_windowing:
+            weights = windows.taylor(element_count)
+
+        # Save it to parameter dictionary
+        self.parameters_to_save["sources_pos"] = sources_xy
+        self.parameters_to_save["sources_w"] = weights
+        self.parameters_to_save["model_select"] = self.model
+
+    def save_parameters_for_matlab(self, path: str):
         """
-        Saving incident angles and sampling points for MATLAB simulation.
+        Saving incident angles, sampling points and model parameters for MATLAB simulation.
         """
         savemat(
-            os.path.join(path, "pw_set.mat"),
-            dict(
-                kwave=self.k_wave,
-                sample_points_x=self.x_sampling,
-                incident_angles_rad=self.directions,
-            ),
+            file_name=os.path.join(path, "pw_set.mat"),
+            mdict=self.parameters_to_save,
         )
