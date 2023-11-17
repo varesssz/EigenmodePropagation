@@ -8,8 +8,7 @@ from PlaneWaveSet import PlaneWaveSet
 
 if __name__ == '__main__':
 
-    # Parameters of PWD
-    print("Initialization...")
+    print(">> Initialization...")
     wavelength = 299792458 / 1e9  # [m]
     k_wave = 2 * np.pi / wavelength
     # Initialize plane wave set
@@ -19,7 +18,7 @@ if __name__ == '__main__':
         window=120,
     )
 
-    """ Set up the simulation model """
+    # Set up the simulation model
     # Plane wave model is used if no setup is uncommented from below
 
     # pw_set.set_up_points_along_line_model(
@@ -41,11 +40,13 @@ if __name__ == '__main__':
     pw_set.save_parameters_for_matlab(path="./MATLAB/data/")
 
     # Create indices of the excitation vector from an array of incident angles
-    excitation_angles = np.deg2rad([120, 130])
-    indices = np.argmin(
-        np.abs(pw_set.directions - excitation_angles[:, np.newaxis]),
+    excitation_angles = np.deg2rad([10, 15, 20, 80, 90, 91, 140, 180])[np.newaxis]
+    pw_indices = np.argmin(
+        np.abs(pw_set.directions - excitation_angles.T),
         axis=1,
     )
+    evaluation_points_x = np.linspace(-4.5, 4.5, 240 + 1)
+    evaluation_points_y = np.linspace(-5.0, 1.0, 160 + 1)
 
     # Save simulation configuration for MATLAB simulation
     matlab_result_fname = "output/model_%s.txt" % pw_set.model
@@ -53,17 +54,18 @@ if __name__ == '__main__':
         file_name="MATLAB/data/somePW_sim_config.mat",
         mdict=dict(
             with_structure=False,
-            pw_indices=indices,
-            eval_x=np.linspace(-4.5, 4.5, 240 + 1),
-            eval_y=np.linspace(-5.0, 1.0, 160 + 1),
+            pw_indices=pw_indices,
+            eval_x=evaluation_points_x,
+            eval_y=evaluation_points_y,
             result_saving_path=matlab_result_fname,
         )
     )
 
     if AskUserinputRecursively.yes_or_no(
-            "Run MATLAB simulation to excite with partial of the PW set?\n%s deg" % np.rad2deg(excitation_angles)
+            "Run MATLAB simulation to excite with partial of the PW set?\n"
+            "Incident angles [deg]: %s" % [np.around(k, 2) for k in np.rad2deg(pw_set.directions[pw_indices])]
     ):
-        print("Simulating with the model %s" % pw_set.model)
+        print(">> Simulating with the model %s" % pw_set.model)
         matlab = MatlabRunner()
         matlab.run_matlab_script("mieScatt_somePW.m")
         matlab.export_fixer("output")
@@ -81,8 +83,8 @@ if __name__ == '__main__':
         fig = MyPlotlyFigure()
         fig.matlab_styling()
         fig.add_heatmap(
-            x=np.linspace(-4.5, 4.5, 240 + 1),
-            y=np.linspace(-5.0, 1.0, 160 + 1),
+            x=evaluation_points_x,
+            y=evaluation_points_y,
             z=plotting_values,
             colorbar_title_text="E_z(x,y) absolute value [V/m]",
             colorbar_title_side="right",

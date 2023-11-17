@@ -8,7 +8,7 @@ from PlaneWaveSet import PlaneWaveSet
 
 if __name__ == '__main__':
 
-    print("Initializing plane wave set...")
+    print(">> Initializing plane wave set...")
     wavelength = 299792458 / 1e9  # [m]
     k_wave = 2 * np.pi / wavelength
     # Initialize plane wave set
@@ -17,24 +17,45 @@ if __name__ == '__main__':
         sampling_rate=14 / wavelength,
         window=120,
     )
-    pw_set.save_incident_angles_mat(path="./MATLAB/data/")
 
-    cylinder_structure_name = "structureB"
-    cylinder_struct = np.genfromtxt(
-        fname="data/cylinders_%s.txt" % cylinder_structure_name,
-        dtype=np.float64,
-        delimiter=",",
-        skip_header=2,
+    # Set up the simulation model
+    # Plane wave model is used if no setup is uncommented from below
+
+    # pw_set.set_up_points_along_line_model(
+    #     array_distance=-2.0 - 10.0,
+    # )
+
+    # pw_set.set_up_points_along_circle_model(
+    #     array_radius=-2.0 - 10.0,
+    # )
+
+    pw_set.set_up_phased_array_model(
+        array_distance=-2.0 - 3.0,
+        array_length=20,
+        element_dist_per_lambda=0.5,
+        taylor_windowing=False,
     )
-    savemat("./MATLAB/data/cylinder_struct.mat", dict(clyinders=cylinder_struct))
 
-    if AskUserinputRecursively.yes_or_no("Run MATLAB simulation to excite with PW set?"):
-        print("Running MATLAB simulation to excite with PW set...")
+    # Save PW set's parameters for MATLAB usage
+    pw_set.save_parameters_for_matlab(path="./MATLAB/data/")
+
+    cylinder_structure_name = "structureC"
+    savemat("./MATLAB/data/cylinder_struct.mat", dict(
+        cylinders=np.genfromtxt(
+            fname="data/cylinders_%s.txt" % cylinder_structure_name,
+            dtype=np.float64,
+            delimiter=",",
+            skip_header=2,
+        )
+    ))
+
+    if AskUserinputRecursively.yes_or_no("Run MATLAB simulation to excite with every PW in the set?"):
+        print(">> Simulating with the model %s" % pw_set.model)
         matlab = MatlabRunner()
         matlab.run_matlab_script("mieScatt_multiPW.m")
         matlab.export_fixer()
 
-    print("Reading MATLAB results...")
+    print(">> Reading MATLAB results...")
     efield_transfer_matrix = np.genfromtxt(
         fname="MATLAB/data/efield_transfer_mat.txt",
         dtype=np.complex64,
@@ -42,7 +63,7 @@ if __name__ == '__main__':
     )
 
     # Plane Wave Decomposition with DFT
-    print("Plane Wave Decomposition with DFT...")
+    print(">> Performing Plane Wave Decomposition with DFT...")
     # Allocate memory for plane waves (E_z(k_x))
     ez_kx = np.empty((pw_set.k_x.size, pw_set.k_x.size), np.complex64)
     # Calculate PWD for each column (for loop goes through rows, so transposing is necessary)
@@ -69,8 +90,6 @@ if __name__ == '__main__':
     transfer_matrix = np.transpose(ez_kx)
 
     # Save resulting Transfer-matrix in file
-    print("Saving transfer-matrix...")
-    with open("data/transfer_mat_%s.pkl" % cylinder_structure_name, "wb") as file:
+    print(">> Saving transfer-matrix...")
+    with open("data/transfer_mat_%s_from_%s.pkl" % (cylinder_structure_name, pw_set.model), "wb") as file:
         pickle.dump(transfer_matrix, file)
-
-    print("DONE")

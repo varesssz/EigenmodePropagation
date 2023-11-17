@@ -48,6 +48,7 @@ if pw_set.model_select == "points_as_phased_array"
         length(pw_set.sources_pos)...
     );
     % Generate field of each antenna array element
+    fprintf("Source points simulated:\n")
     for i = 1 : length(pw_set.sources_pos)
         inc = point_source(pw_set.sources_pos(i), pw_set.kwave);
         p = MieSolver(inc);
@@ -58,14 +59,19 @@ if pw_set.model_select == "points_as_phased_array"
         p.transmissionTE()
         p.solve()
         source_fields(:, :, i) = p.getTotalField(points_to_evaluate) * pw_set.sources_w(i);
+        % Progress tracker
+        fprintf(sprintf("\r %3d out of %3d", i, length(pw_set.sources_pos)))
     end
+    fprintf("\n")
+    fprintf(sprintf("Exciting with %2d testing incident waves...\n", length(sim_config.pw_indices)))
     for i = sim_config.pw_indices + 1
         % Element distances from linspace positions
         steps = abs([real(pw_set.sources_pos), 0] - [0, real(pw_set.sources_pos)]);
         element_distance = mean(steps(2:end-1));
         % Phase shift for each element
         phase_shift = pw_set.kwave * element_distance * cos(pw_set.inc_angles(i));
-        phases = exp(1i * phase_shift * (0 : 1 : length(pw_set.sources_pos) - 1));
+        multiplier_array = -(length(pw_set.sources_pos) - 1)/2 : 1 : (length(pw_set.sources_pos) - 1)/2;
+        phases = exp(1i * phase_shift * multiplier_array);
         % Multiply each element's generated field with the phase shift
         % Also add together, creating a resultant field
         for j = 1 : length(phases)
@@ -76,6 +82,7 @@ if pw_set.model_select == "points_as_phased_array"
 % by simple one-to-one matching to a point sources
 else
     % Iterate over the given plane wave directions
+    fprintf(sprintf("Simulating %2d testing incident waves...\n", length(sim_config.pw_indices)))
     for i = sim_config.pw_indices + 1
         % setup an incident plane wave
         if pw_set.model_select == "plane_wave"
@@ -109,6 +116,7 @@ else
 end
 
 % Write out results in file
+fprintf("Writing results in file...\n")
 writematrix(e_field, sim_config.result_saving_path)
 
 %% Plot
