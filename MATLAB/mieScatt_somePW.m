@@ -5,50 +5,51 @@ close all
 addpath("./Mie_cylinder")
 
 % From Python script load
+% what pw model to use, list of incident pw indices to excite the structure
+conf = load("data/config_somePW.mat");
 % kwave, sample_points_x, inc_angles and model parameters
-pw_set = load("data/pw_set.mat");
+pw_set = load(sprintf("data/pw_set_from_%s.mat", conf.pw_set_model));
 % structure description (cylinder positions and size)
 structure = load("data/cylinder_struct.mat");
-% list of incident pw indices to excite the structure
-sim_config = load("data/somePW_sim_config.mat");
 
 % Create list of scatterer objects
 figure(1)
 xlim([-3 3])
 ylim([-2 2])
 axis equal
-if sim_config.with_structure
+if conf.with_structure
     cyl_list = [];
     for cyl = transpose(structure.cylinders)
        cyl_list=[cyl_list, scatterer(cyl(1) + cyl(2)*1i, cyl(3), 'soft')];
        cyl_list(end).show()
     end
 else
-    cyl_list=[scatterer(0, 1, 'dielectric', 1)];
+    cyl_list=[scatterer(10, 1, 'dielectric', 1)];
 end
 
 % Create space points to evaluate the field
-[X_var,Y_var] = meshgrid(sim_config.eval_x,sim_config.eval_y);
+[X_var,Y_var] = meshgrid(conf.eval_x,conf.eval_y);
 points_to_evaluate = X_var + 1i*Y_var;
 
 %% Simulation
 % Allocate memory for results
 e_field = zeros(...
-    length(sim_config.eval_y),...
-    length(sim_config.eval_x)...
+    length(conf.eval_y),...
+    length(conf.eval_x)...
 );
+% Progress and time estimation in waitbar
+start = datetime;
 
 % Phased array model simulate plane waves
 % by the result of multiple point source
-if pw_set.model_select == "points_as_phased_array"
+if pw_set.model == "points_as_phased_array"
     % Allocate array
     source_fields = zeros(...
-        length(sim_config.eval_y),...
-        length(sim_config.eval_x),...
+        length(conf.eval_y),...
+        length(conf.eval_x),...
         length(pw_set.sources_pos)...
     );
     % Generate field of each antenna array element
-    fprintf("Source points simulated:\n")
     for i = 1 : length(pw_set.sources_pos)
         inc = point_source(pw_set.sources_pos(i), pw_set.kwave);
         p = MieSolver(inc);
@@ -60,11 +61,13 @@ if pw_set.model_select == "points_as_phased_array"
         p.solve()
         source_fields(:, :, i) = p.getTotalField(points_to_evaluate) * pw_set.sources_w(i);
         % Progress tracker
-        fprintf(sprintf("\r %3d out of %3d", i, length(pw_set.sources_pos)))
+        fprintf(sprintf('\rArray elements simulated: %3d out of %3d', i, length(pw_set.sources_pos)))
+        remaining = length(pw_set.sources_pos) - i;
+        fprintf("  |  Time remaining: " + string((datetime - start) / i * remaining))
     end
     fprintf("\n")
-    fprintf(sprintf("Exciting with %2d testing incident waves...\n", length(sim_config.pw_indices)))
-    for i = sim_config.pw_indices + 1
+    fprintf(sprintf("Exciting with %d testing incident waves...\n", length(conf.pw_indices)))
+    for i = conf.pw_indices + 1
         % Element distances from linspace positions
         steps = abs([real(pw_set.sources_pos), 0] - [0, real(pw_set.sources_pos)]);
         element_distance = mean(steps(2:end-1));
@@ -82,14 +85,14 @@ if pw_set.model_select == "points_as_phased_array"
 % by simple one-to-one matching to a point sources
 else
     % Iterate over the given plane wave directions
-    fprintf(sprintf("Simulating %2d testing incident waves...\n", length(sim_config.pw_indices)))
-    for i = sim_config.pw_indices + 1
+    fprintf(sprintf("Simulating %d testing incident waves...\n", length(conf.pw_indices)))
+    for i = conf.pw_indices + 1
         % setup an incident plane wave
-        if pw_set.model_select == "plane_wave"
+        if pw_set.model == "plane_wave"
             inc = plane_wave(pw_set.inc_angles(i), pw_set.kwave);
-        elseif pw_set.model_select == "points_along_line"
+        elseif pw_set.model == "points_along_line"
             inc = point_source(pw_set.sources_pos(i), pw_set.kwave);
-        elseif pw_set.model_select == "points_along_circle"
+        elseif pw_set.model == "points_along_circle"
             inc = point_source(pw_set.sources_pos(i), pw_set.kwave);
         end
 
@@ -102,7 +105,7 @@ else
             p.addScatterer(scatterer)
         end
 
-        % configure for TE transmission conditions
+        % confure for TE transmission conditions
         % (Transverse Electric) = Electric
         % field vector is perpendicular to the plane of propagation
         p.transmissionTE()
@@ -117,11 +120,11 @@ end
 
 % Write out results in file
 fprintf("Writing results in file...\n")
-writematrix(e_field, sim_config.result_saving_path)
+writematrix(e_field, conf.result_saving_path)
 
 %% Plot
 figure(1)
-imagesc(sim_config.eval_x,sim_config.eval_y,real(e_field))
+imagesc(conf.eval_x,conf.eval_y,real(e_field))
 xlim([-4.5 4.5])
 ylim([-5 1])
 axis equal
@@ -129,4 +132,4 @@ colorbar
 colormap(jet(256));
 caxis([-1 1])
 set(gca,'YDir','normal')
-%print(gcf,sprintf('output/inc120deg_by_model_%s.png', pw_set.model_select),'-dpng','-r200');
+%print(gcf,sprintf('output/inc120deg_by_model_%s.png', pw_set.model),'-dpng','-r200');

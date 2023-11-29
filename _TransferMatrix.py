@@ -18,7 +18,7 @@ if __name__ == '__main__':
         window=120,
     )
 
-    # Set up the simulation model
+    print(">> Setting up the simulation model...")
     # Plane wave model is used if no setup is uncommented from below
 
     # pw_set.set_up_points_along_line_model(
@@ -30,16 +30,19 @@ if __name__ == '__main__':
     # )
 
     pw_set.set_up_phased_array_model(
-        array_distance=-2.0 - 3.0,
-        array_length=20,
+        array_distance=-2.0 - 1.0,
+        array_length=50,
         element_dist_per_lambda=0.5,
         taylor_windowing=False,
     )
 
+    print(">> Saving plane wave set parameters...")
     # Save PW set's parameters for MATLAB usage
-    pw_set.save_parameters_for_matlab(path="./MATLAB/data/")
+    pw_set.save_parameters(mat_path="./MATLAB/data/", pkl_path="./data/")
 
     cylinder_structure_name = "structureC"
+
+    print(">> Saving scatterer structure parameters for MATLAB...")
     savemat("./MATLAB/data/cylinder_struct.mat", dict(
         cylinders=np.genfromtxt(
             fname="data/cylinders_%s.txt" % cylinder_structure_name,
@@ -48,6 +51,13 @@ if __name__ == '__main__':
             skip_header=2,
         )
     ))
+    # Save simulation configuration for MATLAB simulation
+    savemat(
+        file_name="MATLAB/data/config_multiPW.mat",
+        mdict=dict(
+            pw_set_model=pw_set.model,
+        )
+    )
 
     if AskUserinputRecursively.yes_or_no("Run MATLAB simulation to excite with every PW in the set?"):
         print(">> Simulating with the model %s" % pw_set.model)

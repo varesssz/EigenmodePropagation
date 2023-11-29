@@ -1,46 +1,24 @@
 import numpy as np
+import pickle
 from scipy.io import savemat
 
 import AskUserinputRecursively
 from MatlabRunner import MatlabRunner
 from MyPlotlyFigure import MyPlotlyFigure
-from PlaneWaveSet import PlaneWaveSet
 
 if __name__ == '__main__':
 
-    print(">> Initialization...")
-    wavelength = 299792458 / 1e9  # [m]
-    k_wave = 2 * np.pi / wavelength
-    # Initialize plane wave set
-    pw_set = PlaneWaveSet(
-        k_wave=k_wave,
-        sampling_rate=14 / wavelength,
-        window=120,
-    )
+    # pw_set_model = "plane_wave"
+    # pw_set_model = "points_along_line"
+    # pw_set_model = "points_along_circle"
+    pw_set_model = "points_as_phased_array"
 
-    # Set up the simulation model
-    # Plane wave model is used if no setup is uncommented from below
-
-    # pw_set.set_up_points_along_line_model(
-    #     array_distance=-2.0 - 3.0,
-    # )
-
-    # pw_set.set_up_points_along_circle_model(
-    #     array_radius=-2.0 - 3.0,
-    # )
-
-    # pw_set.set_up_phased_array_model(
-    #     array_distance=-2.0 - 2.0,
-    #     array_length=18,
-    #     element_dist_per_lambda=0.5,
-    #     taylor_windowing=True,
-    # )
-
-    # Save PW set's parameters for MATLAB usage
-    pw_set.save_parameters_for_matlab(path="./MATLAB/data/")
+    print(">> Initializing plane wave set from file...")
+    with open("data/pw_set_from_%s.pkl" % pw_set_model, "rb") as file:
+        pw_set = pickle.load(file)
 
     # Create indices of the excitation vector from an array of incident angles
-    excitation_angles = np.deg2rad([10, 15, 20, 80, 90, 91, 140, 180])[np.newaxis]
+    excitation_angles = np.deg2rad([5])[np.newaxis]
     pw_indices = np.argmin(
         np.abs(pw_set.directions - excitation_angles.T),
         axis=1,
@@ -51,9 +29,10 @@ if __name__ == '__main__':
     # Save simulation configuration for MATLAB simulation
     matlab_result_fname = "output/model_%s.txt" % pw_set.model
     savemat(
-        file_name="MATLAB/data/somePW_sim_config.mat",
+        file_name="MATLAB/data/config_somePW.mat",
         mdict=dict(
             with_structure=False,
+            pw_set_model=pw_set_model,
             pw_indices=pw_indices,
             eval_x=evaluation_points_x,
             eval_y=evaluation_points_y,

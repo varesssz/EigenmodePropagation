@@ -4,7 +4,6 @@ from scipy.io import savemat
 
 import AskUserinputRecursively
 from MatlabRunner import MatlabRunner
-from PlaneWaveSet import PlaneWaveSet
 from MyPlotlyFigure import MyPlotlyFigure
 
 
@@ -44,21 +43,22 @@ def eigenmode_filter(
 
 if __name__ == '__main__':
 
-    print("Initializing plane wave set...")
-    wavelength = 299792458 / 1e9  # [m]
-    k_wave = 2 * np.pi / wavelength
-    pw_set = PlaneWaveSet(
-        k_wave=k_wave,
-        sampling_rate=14 / wavelength,
-        window=120,
-    )
+    # pw_set_model = "plane_wave"
+    # pw_set_model = "points_along_line"
+    # pw_set_model = "points_along_circle"
+    pw_set_model = "points_as_phased_array"
 
-    matlab_structure = "structureB"
+    print(">> Initializing plane wave set from file...")
+    with open("data/pw_set_from_%s.pkl" % pw_set_model, "rb") as file:
+        pw_set = pickle.load(file)
 
-    print("Load Transfer-matrix from file...")
-    with open("data/transfer_mat_%s.pkl" % matlab_structure, "rb") as file:
+    cylinder_structure_name = "structureC"
+
+    print(">> Loading Transfer-matrix from file...")
+    with open("data/transfer_mat_%s_from_%s.pkl" % (cylinder_structure_name, pw_set.model), "rb") as file:
         transfer_matrix = pickle.load(file)
 
+    print(">> Calculating eigenmodes...")
     # Eigen values and vectors of the transfer matrix
     eig_values, eig_vectors = np.linalg.eig(transfer_matrix)
 
@@ -134,11 +134,12 @@ if __name__ == '__main__':
                 )
             )
             print(
-                "Running MATLAB simulation to excite with eigenmode #%d (eigenvalue: %.3f ∠ %.3f°)..." % (
+                ">> Running MATLAB simulation to excite with eigenmode #%d (eigenvalue: %.3f ∠ %.3f°)..." % (
                     index,
                     np.abs(eig_values[index]),
                     np.rad2deg(np.angle(eig_values[index]))
                 )
             )
+            print(">> Simulating with the model %s" % pw_set.model)
             matlab.run_matlab_script("mieScatt_eigenPW.m")
         matlab.export_folder_fixer("output")

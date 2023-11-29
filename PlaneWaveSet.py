@@ -1,6 +1,7 @@
 import warnings
 import os.path
 import numpy as np
+import pickle
 from scipy.io import savemat
 from scipy.signal import windows
 
@@ -74,7 +75,7 @@ class PlaneWaveSet:
             kwave=self.k_wave,
             sample_points_x=self.x_sampling,
             inc_angles=self.directions,
-            model_select=self.model,
+            model=self.model,
         )
 
     def set_up_points_along_line_model(
@@ -89,7 +90,7 @@ class PlaneWaveSet:
 
         # Save it to parameter dictionary
         self.parameters_to_save["sources_pos"] = sources_xy
-        self.parameters_to_save["model_select"] = self.model
+        self.parameters_to_save["model"] = self.model
 
     def set_up_points_along_circle_model(
             self,
@@ -103,7 +104,7 @@ class PlaneWaveSet:
 
         # Save it to parameter dictionary
         self.parameters_to_save["sources_pos"] = sources_xy
-        self.parameters_to_save["model_select"] = self.model
+        self.parameters_to_save["model"] = self.model
 
     def set_up_phased_array_model(
             self,
@@ -130,13 +131,15 @@ class PlaneWaveSet:
         # Save it to parameter dictionary
         self.parameters_to_save["sources_pos"] = sources_xy
         self.parameters_to_save["sources_w"] = weights
-        self.parameters_to_save["model_select"] = self.model
+        self.parameters_to_save["model"] = self.model
 
-    def save_parameters_for_matlab(self, path: str):
+    def save_parameters(self, mat_path: str, pkl_path: str):
         """
-        Saving incident angles, sampling points and model parameters for MATLAB simulation.
+        Saving incident angles, sampling points and model parameters for MATLAB simulation and Python usage.
         """
         savemat(
-            file_name=os.path.join(path, "pw_set.mat"),
+            file_name=os.path.join(mat_path, "pw_set_from_%s.mat" % self.model),
             mdict=self.parameters_to_save,
         )
+        with open(os.path.join(pkl_path, "pw_set_from_%s.pkl" % self.model), "wb") as file:
+            pickle.dump(self, file)

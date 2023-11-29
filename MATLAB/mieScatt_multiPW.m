@@ -5,8 +5,10 @@ close all
 addpath("./Mie_cylinder")
 
 % From Python script load
+% what plane wave model to use
+conf = load("data/config_multiPW.mat");
 % kwave, sample_points_x, inc_angles and model parameters
-pw_set = load("data/pw_set.mat");
+pw_set = load(sprintf("data/pw_set_from_%s.mat", conf.pw_set_model));
 % structure description (cylinder positions and size)
 structure = load("data/cylinder_struct.mat");
 
@@ -30,14 +32,15 @@ points_to_evaluate = X_var + 1i*Y_var;
 %% Simulation
 % Allocate memory for results
 e_field = zeros(length(eval_x), length(pw_set.inc_angles));
+% Progress and time estimation in waitbar
+start = datetime;
 
 % Phased array model simulate plane waves
 % by the result of multiple point source
-if pw_set.model_select == "points_as_phased_array"
+if pw_set.model == "points_as_phased_array"
     % Allocate array
     source_fields = zeros(length(eval_x), length(pw_set.sources_pos));
     % Generate field of each antenna array element
-    fprintf("Source points simulated:\n")
     for i = 1 : length(pw_set.sources_pos)
         inc = point_source(pw_set.sources_pos(i), pw_set.kwave);
         p = MieSolver(inc);
@@ -48,10 +51,11 @@ if pw_set.model_select == "points_as_phased_array"
         p.solve()
         source_fields(:, i) = p.getTotalField(points_to_evaluate) * pw_set.sources_w(i);
         % Progress tracker
-        fprintf(sprintf("\r %3d out of %3d", i, length(pw_set.sources_pos)))
+        fprintf(sprintf('\rArray elements simulated: %3d out of %3d', i, length(pw_set.sources_pos)))
+        remaining = length(pw_set.sources_pos) - i;
+        fprintf("  |  Time remaining: " + string((datetime - start) / i * remaining))
     end
     fprintf("\n")
-    fprintf("Incident waves excited:\n")
     for i = 1 : length(pw_set.inc_angles)
         % Element distances from linspace positions
         steps = abs([real(pw_set.sources_pos), 0] - [0, real(pw_set.sources_pos)]);
@@ -66,21 +70,21 @@ if pw_set.model_select == "points_as_phased_array"
             e_field(:, i) = e_field(:, i) + source_fields(:, j) * phases(j);
         end
         % Progress tracker
-        fprintf(sprintf("\r %3d out of %3d", i, length(pw_set.inc_angles)))
+        fprintf(sprintf('\rWaves steered: %3d out of %3d', i, length(pw_set.inc_angles)))
+        remaining = length(pw_set.inc_angles) - i;
+        fprintf("  |  Time remaining: " + string((datetime - start) / i * remaining))
     end
-    fprintf("\n")
 % Other model simulate plane waves
 % by simple one-to-one matching to a point sources
 else
     % Iterate over every plane wave direction
-    fprintf("Incident waves simulated:\n")
     for i = 1 : length(pw_set.inc_angles)
         % setup an incident plane wave
-        if pw_set.model_select == "plane_wave"
+        if pw_set.model == "plane_wave"
             inc = plane_wave(pw_set.inc_angles(i), pw_set.kwave);
-        elseif pw_set.model_select == "points_along_line"
+        elseif pw_set.model == "points_along_line"
             inc = point_source(pw_set.sources_pos(i), pw_set.kwave);
-        elseif pw_set.model_select == "points_along_circle"
+        elseif pw_set.model == "points_along_circle"
             inc = point_source(pw_set.sources_pos(i), pw_set.kwave);
         end
 
@@ -103,10 +107,12 @@ else
         % Calculate total field
         e_field(:, i) = p.getTotalField(points_to_evaluate);
         % Progress tracker
-        fprintf(sprintf("\r %3d out of %3d", i, length(pw_set.inc_angles)))
+        fprintf(sprintf('\rWave sources simulated: %3d out of %3d', i, length(pw_set.inc_angles)))
+        remaining = length(pw_set.inc_angles) - i;
+        fprintf("  |  Time remaining: " + string((datetime - start) / i * remaining))
     end
-    fprintf("\n")
 end
+fprintf("\n")
 
 % Write out results in file
 fprintf("Writing results in file...\n")
