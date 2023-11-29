@@ -82,6 +82,7 @@ if __name__ == '__main__':
         # Create figure with heatmap plot and structure drawing
         fig = MyPlotlyFigure()
         fig.matlab_styling()
+        fig.scattering_field_styling()
         fig.add_heatmap(
             x=evaluation_points_x,
             y=evaluation_points_y,
@@ -92,13 +93,5 @@ if __name__ == '__main__':
             zmid=0,
             # zmax=np.size(excitation_angles, 0),
             # zmin=-np.size(excitation_angles, 0),
-        )
-        fig.update_layout(
-            # title_text=rmsd_string,
-            # margin_t=50,
-            xaxis_title="x [m]",
-            yaxis_title="y [m]",
-            yaxis_scaleanchor="x",
-            yaxis_scaleratio=1,
         )
         fig.show()

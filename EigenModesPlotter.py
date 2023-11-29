@@ -46,39 +46,23 @@ if __name__ == '__main__':
             )
             print(rmsd_string)
 
-        if AskUserinputRecursively.yes_or_no("Plot the eigenmode on heatmap?"):
-            # Create figure with heatmap plot and structure drawing
-            fig = MyPlotlyFigure()
-            fig.matlab_styling()
-            fig.add_heatmap(
-                x=np.linspace(-4.5, 4.5, 240 + 1),
-                y=np.linspace(-5.0, 1.0, 160 + 1),
-                z=plotting_values,
-                colorbar_title_text="E_z(x,y) absolute value [V/m]",
-                colorbar_title_side="right",
-                # colorscale="jet",
-                # zmid=0,
-                zmax=14,
-                zmin=0,
-            )
-            fig.add_scatter(
-                x=cylinder_struct[:, 0],
-                y=cylinder_struct[:, 1],
-                mode="markers",
-                marker=dict(
-                    size=45, color="rgba(255, 255, 255, 0)",
-                    line=dict(
-                        color="rgba(255, 255, 255, 1)",
-                        width=2
-                    ),
-                ),
-            )
-            fig.update_layout(
-                # title_text=rmsd_string,
-                # margin_t=50,
-                xaxis_title="x [m]",
-                yaxis_title="y [m]",
-                yaxis_scaleanchor="x",
-                yaxis_scaleratio=1,
-            )
-            fig.show()
+            if AskUserinputRecursively.yes_or_no("Plot the eigenmode on heatmap?"):
+                # Create figure with heatmap plot and structure drawing
+                fig = MyPlotlyFigure()
+                fig.matlab_styling()
+                fig.scattering_field_styling(cylinder_struct=cylinder_struct)
+                fig.update_layout(
+                    title_text=rmsd_string,
+                    margin_t=50,
+                )
+                fig.add_heatmap(
+                    x=np.linspace(-4.5, 4.5, 60 + 1),
+                    y=np.linspace(-5.0, 1.0, 40 + 1),
+                    z=plotting_values,
+                    colorbar_title_text="E_z(x,y) absolute value difference [V/m]",
+                    colorbar_title_side="right",
+                    # colorscale="jet",
+                    zmax=np.abs(e_field_pec).max(),
+                    zmin=-np.abs(e_field_pec).max(),
+                )
+                fig.show()
