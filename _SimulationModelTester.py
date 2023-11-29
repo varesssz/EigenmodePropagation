@@ -68,7 +68,7 @@ if __name__ == '__main__':
         print(">> Simulating with the model %s" % pw_set.model)
         matlab = MatlabRunner()
         matlab.run_matlab_script("mieScatt_somePW.m")
-        matlab.export_fixer("output")
+        matlab.export_fixer(matlab_result_fname)
 
     # Read MATLAB results
     e_z_simulated = np.genfromtxt(

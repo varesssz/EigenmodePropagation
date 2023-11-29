@@ -31,21 +31,29 @@ class MatlabRunner:
         print(" The script took %dh %dmin %dsec to run" % (elapsed_sec // 3600, elapsed_sec // 60, elapsed_sec % 60))
         print("=======================================\n\n")
 
+    def export_folder_fixer(
+            self,
+            sub_folder_in_cd="data",
+    ):
+        for file_name in os.listdir(os.path.join(self.current_directory, sub_folder_in_cd)):
+            if file_name.find(".txt") != -1:
+                self.export_fixer(
+                    file_path_in_cd=os.path.join(sub_folder_in_cd, file_name)
+                )
+
     def export_fixer(
             self,
-            sub_folder="data",
+            file_path_in_cd: str,
     ):
-        data_folder = os.path.join(self.current_directory, sub_folder)
-        for file_name in os.listdir(data_folder):
-            if file_name.find(".txt") != -1:
-                # Read the contents of file in a variable
-                with open(os.path.join(data_folder, file_name), "r") as file:
-                    content = file.read()
+        file_path = os.path.join(self.current_directory, file_path_in_cd)
+        # Read the contents of file in a variable
+        with open(file_path, "r") as file:
+            content = file.read()
 
-                # Replace characters
-                content = content.replace("i", "j")
-                content = content.replace("+-", "-")
+        # Replace characters
+        content = content.replace("i", "j")
+        content = content.replace("+-", "-")
 
-                # Open the file in write mode and write the new fixed content
-                with open(os.path.join(data_folder, file_name), "w") as file:
-                    file.write(content)
+        # Open the file in write mode and write the new fixed content
+        with open(file_path, "w") as file:
+            file.write(content)

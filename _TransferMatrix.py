@@ -53,7 +53,7 @@ if __name__ == '__main__':
         print(">> Simulating with the model %s" % pw_set.model)
         matlab = MatlabRunner()
         matlab.run_matlab_script("mieScatt_multiPW.m")
-        matlab.export_fixer()
+        matlab.export_fixer("data/efield_transfer_mat.txt")
 
     print(">> Reading MATLAB results...")
     efield_transfer_matrix = np.genfromtxt(

@@ -87,7 +87,7 @@ if __name__ == '__main__':
         print(">> Simulating with the model %s" % pw_set.model)
         matlab = MatlabRunner()
         matlab.run_matlab_script("mieScatt_somePW.m")
-        matlab.export_fixer()
+        matlab.export_fixer("data/validation_e_field_y0.txt")
 
     print(">> Reading MATLAB results...")
     e_z_simulated = np.genfromtxt(

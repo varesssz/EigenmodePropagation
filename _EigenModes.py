@@ -141,4 +141,4 @@ if __name__ == '__main__':
                 )
             )
             matlab.run_matlab_script("mieScatt_eigenPW.m")
-            matlab.export_fixer("output")
+        matlab.export_folder_fixer("output")
