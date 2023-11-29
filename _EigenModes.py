@@ -66,28 +66,32 @@ if __name__ == '__main__':
     sort = np.flip(np.argsort(np.abs(eig_values)))
     eig_values = eig_values[sort]
     eig_vectors = eig_vectors[:, sort]
-    # Save all eigen vectors for "mieScatt_ALLeigenPW.m" script to simulate with all
-    savemat(
-        file_name="MATLAB/data/eigen_vectors.mat",
-        mdict=dict(
-            eigen_vectors=eig_vectors,
+
+    # Simulate with all eigenmode on a 1D space
+    if AskUserinputRecursively.yes_or_no("Run MATLAB simulation to check every found eigenmode's 1D result?"):
+        matlab = MatlabRunner()
+        # Save simulation configuration for MATLAB simulation
+        savemat(
+            file_name="MATLAB/data/config_ALLeigenPW.mat",
+            mdict=dict(
+                pw_set_model=pw_set_model,
+                eig_vectors=eig_vectors,
+                eval_x=np.linspace(-4.5, 4.5, 241),
+                eval_y=-0.75,
+                result_saving_path="output/all_eigenmodes_by_%s" % pw_set.model,  # without file extension
+            )
         )
-    )
+        print(">> Running MATLAB simulation to excite with every found eigenmode...")
+        print(">> Simulating with the model %s" % pw_set.model)
+        matlab.run_matlab_script("mieScatt_ALLeigenPW.m")
+        matlab.export_fixer("output/all_eigenmodes_by_%s.txt" % pw_set.model)
 
     # Select eigenmodes from the eigenvectors by filtering eigenvalues and eigenvector elements
-    indices = eigenmode_filter(
-        eig_values,
-        eig_vectors,
-        pw_set.directions,
-        filter_eig_abs_value_in=(0.5, 0.9999999),
-        # filter_eig_angle_in=(-180.0, -0.0001),
-        filter_eig_vector_above=0.02,
-        filter_eig_vector_only_in_direction=(60, 120),
-        filter_eig_vector_direction_hitrate=0.1,
-    )
+    print(">> Filtering eigenmodes...")
+    # indices = [0, 3, 6, 7, 8, 12, 18, 19, 35]
+    indices = [int(item) for item in input("Enter eigenmode indices you are interested in\n(int int ...): ").split()]
 
-    indices = [757, 761, 763, 765, 768, 772, 774]
-
+    # Filer eigenvector components (alias rows) by incident angle
     direction_mask = (pw_set.directions > np.deg2rad(0)) & (np.deg2rad(180) > pw_set.directions)
 
     # Plot the selected eigenmode plane wave components (= eigen vector elements)
@@ -116,17 +120,19 @@ if __name__ == '__main__':
 
     # Simulate with selected eigenmode on a 2D space
     if AskUserinputRecursively.yes_or_no("Run MATLAB simulation to check the filtered eigenmodes?"):
+        with_structure = AskUserinputRecursively.yes_or_no("Simulate with the structure in the simulation space?")
         matlab = MatlabRunner()
         user_indices = [int(item) for item in input(
-            "\nEnter eigenmode indices if you want to simulate other than the following: %s\n" % indices
+            "\nEnter eigenmode indices if you want to simulate other than the following: %s\n(int int ...): " % indices
         ).split()]
         if len(user_indices) != 0:
             indices = user_indices
         for index in indices:
             savemat(
-                file_name="MATLAB/data/eigenvector_sim_config.mat",
+                file_name="MATLAB/data/config_eigenPW.mat",
                 mdict=dict(
-                    with_structure=True,
+                    with_structure=with_structure,
+                    pw_set_model=pw_set_model,
                     eigenmode_number=index,
                     eigen_vector=eig_vectors[:, index] * direction_mask,
                     eval_x=np.linspace(-4.5, 4.5, 60 + 1),
