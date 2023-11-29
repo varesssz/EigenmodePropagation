@@ -5,6 +5,11 @@ import AskUserinputRecursively
 
 if __name__ == '__main__':
 
+    # pw_set_model = "plane_wave"
+    # pw_set_model = "points_along_line"
+    # pw_set_model = "points_along_circle"
+    pw_set_model = "points_as_phased_array"
+
     # Which structure to draw on the heatmap
     cylinder_structure_name = "structureC"
     cylinder_struct = np.genfromtxt(
@@ -15,23 +20,38 @@ if __name__ == '__main__':
     )
 
     # Check the following eigenmodes (plotting can be skipped on each iteration)
-    for index in [757, 761, 763, 768, 772, 776]:  # [757, 761, 763, 768, 772, 776]
+    indices = [int(item) for item in input("Enter eigenmode indices you are interested in\n(int int ...): ").split()]
+    for index in indices:
         print("\n\n>> Eigenmode #%d" % index)
-        folder_path = "MATLAB/data/structC_w120_x5605_k801/0deg_to_180deg_excitation/"
+        folder_path = "MATLAB/data/structC_w120_x5605_k801/points_along_circle_model/"
         # folder_path = "MATLAB/output/"
 
         # Import PEC simulation results
         e_field_pec = np.genfromtxt(
-            fname=folder_path + "eigenmode_e_field_%d_pec.txt" % index,
+            fname=folder_path + "eigenmode_by_%s_e_field_%d_pec.txt" % (pw_set_model, index),
             dtype=np.complex64,
             delimiter=",",
         )
         plotting_values = np.abs(e_field_pec)
 
+        if AskUserinputRecursively.yes_or_no("Plot the eigenmode on heatmap?"):
+            # Create figure with heatmap plot and structure drawing
+            fig = MyPlotlyFigure()
+            fig.matlab_styling()
+            fig.scattering_field_styling(cylinder_struct=cylinder_struct)
+            fig.add_heatmap(
+                x=np.linspace(-4.5, 4.5, 60 + 1),
+                y=np.linspace(-5.0, 1.0, 40 + 1),
+                z=plotting_values,
+                colorbar_title_text="E_z(x,y) absolute value [V/m]",
+                colorbar_title_side="right",
+            )
+            fig.show()
+
         if AskUserinputRecursively.yes_or_no("Calculate the difference from vacuum simulation?"):
             # Import Vacuum simulation results
             e_field_vacuum = np.genfromtxt(
-                fname=folder_path + "eigenmode_e_field_%d_vacuum.txt" % index,
+                fname=folder_path + "eigenmode_by_%s_e_field_%d_vacuum.txt" % (pw_set_model, index),
                 dtype=np.complex64,
                 delimiter=",",
             )
@@ -46,7 +66,7 @@ if __name__ == '__main__':
             )
             print(rmsd_string)
 
-            if AskUserinputRecursively.yes_or_no("Plot the eigenmode on heatmap?"):
+            if AskUserinputRecursively.yes_or_no("Plot the difference on heatmap?"):
                 # Create figure with heatmap plot and structure drawing
                 fig = MyPlotlyFigure()
                 fig.matlab_styling()
@@ -61,7 +81,7 @@ if __name__ == '__main__':
                     z=plotting_values,
                     colorbar_title_text="E_z(x,y) absolute value difference [V/m]",
                     colorbar_title_side="right",
-                    # colorscale="jet",
+                    colorscale="jet",
                     zmax=np.abs(e_field_pec).max(),
                     zmin=-np.abs(e_field_pec).max(),
                 )
